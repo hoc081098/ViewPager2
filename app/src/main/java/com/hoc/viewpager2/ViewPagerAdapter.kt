@@ -7,9 +7,8 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
-import kotlinx.android.synthetic.main.item_layout.view.*
 import com.bumptech.glide.request.transition.DrawableCrossFadeFactory
-
+import kotlinx.android.synthetic.main.item_layout.view.*
 
 class ViewPagerAdapter(private val glide: GlideRequests) :
     ListAdapter<ViewPagerItem, ViewPagerAdapter.VH>(
