@@ -1,43 +1,89 @@
 package com.hoc.viewpager2
 
-import android.graphics.Color
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.viewpager2.widget.ViewPager2
+import androidx.viewpager2.widget.ViewPager2.ORIENTATION_HORIZONTAL
+import androidx.viewpager2.widget.ViewPager2.ORIENTATION_VERTICAL
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.serialization.ImplicitReflectionSerializer
 import kotlin.LazyThreadSafetyMode.NONE
 
+@ExperimentalCoroutinesApi
+@ImplicitReflectionSerializer
 class MainActivity : AppCompatActivity() {
+    private val scope = MainScope()
     private val adapter by lazy(NONE) { ViewPagerAdapter(GlideApp.with(this)) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        view_pager.adapter = adapter
+        view_pager.run {
+            adapter = this@MainActivity.adapter
+            orientation = ViewPager2.ORIENTATION_HORIZONTAL
+            registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+                override fun onPageSelected(position: Int) {
+                    Toast.makeText(this@MainActivity, "Selected $position", Toast.LENGTH_SHORT).show()
+                }
+            })
+            setPageTransformer(FlipTransformer(this))
+        }
 
-        adapter.submitList(
-            listOf(
-                ViewPagerItem(
-                    id = "0",
-                    imageUrl = "https://cdn-images-1.medium.com/max/600/1*OFJKA8dRYZSb-Kprx-VReg.png",
-                    name = "Android Jetpack"
-                ),
-                ViewPagerItem(
-                    id = "1",
-                    imageUrl = "https://avatars3.githubusercontent.com/u/36917223?s=400&v=4",
-                    name = "hoc081098"
-                ),
-                ViewPagerItem(
-                    id = "2",
-                    imageUrl = "https://cms-assets.tutsplus.com/uploads/users/369/posts/31577/preview_image/Building-reactive-Android-apps-with-RxJava-Kotlin.png",
-                    name = "RxKotlin"
-                ),
-                ViewPagerItem(
-                    id = "3",
-                    imageUrl = "https://res.infoq.com/presentations/netflix-functional-rx/en/slides/sl74.jpg",
-                    name = "Functional Reactive Programming"
+        GlideApp
+            .with(this)
+            .asGif()
+            .load(R.drawable.loading_indicator)
+            .into(image_loading)
+
+        getItems()
+    }
+
+    private fun getItems() {
+        scope.launch {
+            image_loading.visibility = View.VISIBLE
+            getViewPagerItems()
+                .fold(
+                    {
+                        adapter.submitList(it)
+                    },
+                    {
+                        Toast
+                            .makeText(
+                                this@MainActivity,
+                                it.message ?: "An unexpected error occurred",
+                                Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    }
                 )
-            )
-        )
+            image_loading.visibility = View.GONE
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?) = menuInflater.inflate(R.menu.menu_main, menu).let { false } //TODO
+
+    override fun onOptionsItemSelected(item: MenuItem?): Boolean {
+        if (item?.itemId == R.id.action_change_orientation) {
+            view_pager.orientation = when (view_pager.orientation) {
+                ORIENTATION_HORIZONTAL -> ORIENTATION_VERTICAL
+                ORIENTATION_VERTICAL -> ORIENTATION_HORIZONTAL
+                else -> error(":(")
+            }
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
     }
 }
